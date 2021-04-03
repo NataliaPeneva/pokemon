@@ -1,0 +1,15 @@
+{
+  "name": "pokeData",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Reinoptland/pokeData.git",
+  "author": "NataliaPeneva <peneva.natalia@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "nodemon": "^2.0.7"
+  },
+  "scripts": {
+    "start": "nodemon index.js"
+  }
+}
