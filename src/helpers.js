@@ -11,8 +11,7 @@ const totalCountPokemons = (pokemons) => pokemons.length
 // Output: ["Bulbasaur", "Ivysaur", "Venusaur", "Charmander" ...]
 
 const pokemonNames = (pokemons) => {
-  const pokemonNames = pokemons.map((pokemon) => pokemon.name)
-  return pokemonNames
+  return pokemons.map((pokemon) => pokemon.name)
 }
 
 // console.log(pokemonNames(pokemons))
@@ -32,8 +31,11 @@ const pokemonImgUrls = (pokemons) => {
 // Input: pokemons [{}, {}, {}, {}, {}] (all)
 // Output: pokemons that have an evolution [{}, {}, {}] (fewer)
 
+const RARE_SPAWN_CHANCE_THRESHOLD = 0.01
 const rareSpawnChance = (pokemons) => {
-  const rareSpawn = pokemons.filter((pokemon) => pokemon.spawn_chance < 0.01)
+  const rareSpawn = pokemons.filter(
+    (pokemon) => pokemon.spawn_chance < RARE_SPAWN_CHANCE_THRESHOLD
+  )
   return rareSpawn
 }
 
@@ -73,9 +75,24 @@ const findName = (pokemons, name) => {
 // Input: pokemons [{}, {}, {},]
 // Output: ["Grass", "Poison", "Fire" ...]
 
+// map -> {}, {}, {} -> "", "", ""
+// filter -> {}, {}, {} -> {}, {}
+// find -> {}, {}, {} -> {}
+// reduce (functional / pure) / for loop (imperative / mutate)
+
+const types = pokemons.reduce((acc, curr) => {
+  // console.log("ACC:", acc, "CURR:", curr)
+  const newTypes = curr.type.filter((type) => !acc.includes(type))
+
+  // what you return here, becomes: acc
+  return acc.concat(newTypes)
+}, [])
+
+// [{}, {}, {}] -> ["", ""] -> reduce / for loop
+
 const pokemonTypes = (pokemons) => {
   typesList = []
-  // How to do with reduce?
+  // How to do with reduce? (this is good, no reduce necessary)
   for (const pokemon of pokemons) {
     for (const type of pokemon.type) {
       typesList.includes(type) ? true : typesList.push(type)
@@ -96,12 +113,16 @@ const pokemonTypes = (pokemons) => {
 
 const normalizedData = (pokemons) => {
   const normalData = pokemons.map((pokemon) => {
-    pokemon.height = parseFloat(pokemon.height)
-    pokemon.weight = parseFloat(pokemon.weight)
-    pokemon.egg === "Not in Eggs"
-      ? (pokemon.egg = 0)
-      : (pokemon.egg = parseInt(pokemon.egg, 10) * 1000)
-    return pokemon
+    // const result = pokemon.egg === "Not in Eggs"
+    //   ? (pokemon.egg = 0)
+    //   : (pokemon.egg = parseInt(pokemon.egg, 10) * 1000)
+
+    return {
+      ...pokemon,
+      height: parseFloat(pokemon.height),
+      weight: parseFloat(pokemon.weight),
+      egg: pokemon.egg === "Not in Eggs" ? 0 : parseInt(pokemon.egg, 10) * 1000,
+    }
   })
   return normalData
 }
@@ -114,7 +135,7 @@ const normalizedData = (pokemons) => {
 
 // Sorted the entire array by names
 const sortedNamesAZ = (pokemons) => {
-  pokemons.sort((a, b) => {
+  const sortedPokemons = [...pokemons].sort((a, b) => {
     const nameA = a.name
     const nameB = b.name
     if (nameA < nameB) {
@@ -124,7 +145,7 @@ const sortedNamesAZ = (pokemons) => {
       return 1
     }
   })
-  return pokemons
+  return sortedPokemons
 }
 
 // console.log(sortedNamesAZ(pokemons))

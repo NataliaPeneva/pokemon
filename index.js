@@ -11,6 +11,8 @@ app.get("/pokemons", (req, res) => {
   if (req.query.limit && req.query.offset) {
     // req.query.limit -> how many pokemon are you requesting
     // req.query.offset -> where do you want to start counting
+    // offset 0 limit 20 -> 20
+    // offset 50 limit 10 -> 51 - 60
     const slicedPokemons = pokemons.slice(req.query.offset, req.query.limit)
     res.send({ count, slicedPokemons })
   }
