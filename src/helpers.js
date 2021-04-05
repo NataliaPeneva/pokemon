@@ -83,9 +83,22 @@ const pokemonTypes = (pokemons) => {
   }
   return typesList
 }
-
 // console.log(pokemonTypes(pokemons))
 
+const findByType = (pokemons, type) => {
+  pokemonsIncludingType = []
+  // How to do with reduce?
+  for (const pokemon of pokemons) {
+    if (pokemon.type.includes(type)) {
+      console.log(pokemon.type)
+
+      pokemonsIncludingType.push(pokemon)
+    }
+  }
+  return pokemonsIncludingType
+}
+
+// console.log(findByType(pokemons, "Grass").length)
 // 8. Normalize the pokemon data by changing:
 // "height": "0.71 m", -> "height": 0.71
 // "weight": "6.9 kg", -> "weight": 6.9
@@ -108,13 +121,10 @@ const normalizedData = (pokemons) => {
 
 // console.log(normalizedData(pokemons))
 
-// 9. Sort the pokemon array by the names of the pokemon
-// Input: pokemons [{}, {}, {},]
 // Output: sorted pokemons [{name: Abra}, {}, ... {name: Zubat}]
-
 // Sorted the entire array by names
 const sortedNamesAZ = (pokemons) => {
-  pokemons.sort((a, b) => {
+  const sortedPokemons = [...pokemons].sort((a, b) => {
     const nameA = a.name
     const nameB = b.name
     if (nameA < nameB) {
@@ -124,10 +134,24 @@ const sortedNamesAZ = (pokemons) => {
       return 1
     }
   })
-  return pokemons
+  return sortedPokemons
 }
 
-// console.log(sortedNamesAZ(pokemons))
+const sortedIds = (pokemons) => {
+  const sortedPokemons = [...pokemons].sort((a, b) => {
+    const idA = a.id
+    const idB = b.id
+    if (idA < idB) {
+      return -1
+    }
+    if (idA > idB) {
+      return 1
+    }
+  })
+  return sortedPokemons
+}
+
+console.log(sortedNamesAZ(pokemons))
 
 module.exports = {
   totalCountPokemons,
@@ -137,7 +161,9 @@ module.exports = {
   nextEvolutionPresent,
   findId,
   findName,
+  findByType,
   pokemonTypes,
   normalizedData,
   sortedNamesAZ,
+  sortedIds,
 }
