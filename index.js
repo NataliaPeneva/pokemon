@@ -1,44 +1,38 @@
-const Joi = require("joi")
+const yup = require("yup")
 const express = require("express")
 const app = express()
 const helpers = require("./src/helpers")
 let pokemons = require("./src/pokemons")
-const { splice } = require("./src/pokemons")
 
 app.use(express.json())
 
-// How to avoid so many ifs?
+const sortOptions = {
+  name: helpers.sortedNamesAZ,
+  id: helpers.sortedIds,
+}
+
 app.get("/pokemons", (req, res) => {
-  const countAll = helpers.totalCountPokemons(pokemons)
-  console.log(req.query)
-  if (req.query.limit && req.query.offset) {
-    // req.query.limit -> how many pokemon are you requesting - 3
-    // req.query.offset -> where do you want to start counting - 1
-    const indexOfFirstPokemon = parseInt(req.query.offset)
-    const indexOfLastPokemon = indexOfFirstPokemon + parseInt(req.query.limit)
+  let pokemonResponse = [...pokemons]
+  const limit = req.query.limit || pokemons.length
+  const offset = req.query.offset || 0
 
-    const slicedPokemons = pokemons.slice(
-      indexOfFirstPokemon,
-      indexOfLastPokemon
-    )
-    return res.send({ countAll, slicedPokemons })
-  }
   if (req.query.type) {
-    const pokemonsHavingType = helpers.findByType(pokemons, req.query.type)
-    const countByType = pokemonsHavingType.length
-    return res.send({ countByType, pokemonsHavingType })
+    pokemonResponse = helpers.findByType(pokemonResponse, req.query.type)
   }
-  if (req.query.sortBy === "name") {
-    const sortedByName = helpers.sortedNamesAZ(pokemons)
-    return res.send({ countAll, sortedByName })
-  }
-  if (req.query.sortBy === "id") {
-    const sortedByIds = helpers.sortedIds(pokemons)
-    return res.send({ countAll, sortedByIds })
+  if (req.query.sortBy) {
+    const sortingFunc = sortOptions[req.query.sortBy] || helpers.sortedIds
+    pokemonResponse = sortingFunc(pokemonResponse)
   }
 
-  //   console.log("count:", count)
-  res.send({ countAll, pokemons })
+  const countAll = helpers.totalCountPokemons(pokemonResponse)
+  const indexOfFirstPokemon = parseInt(offset)
+  const indexOfLastPokemon = indexOfFirstPokemon + parseInt(limit)
+  const paginatedPokemons = pokemonResponse.slice(
+    indexOfFirstPokemon,
+    indexOfLastPokemon
+  )
+
+  res.send({ count: countAll, pokemons: paginatedPokemons })
 })
 
 app.get("/pokemons/:id", (req, res) => {
@@ -48,21 +42,43 @@ app.get("/pokemons/:id", (req, res) => {
   res.send(pokemonWithId)
 })
 
-// Validation for name&type to be added!!!
-app.post("/pokemons", (req, res) => {
-  //   const { error } = validatePokemon(req.body)
-
-  //   if (error) return res.status(400).send(error.details[0].message)
-  const newPokemon = {
-    id: pokemons.length + 1,
-    ...req.body,
+let nextId = pokemons.length + 1
+app.post("/pokemons", async (req, res) => {
+  try {
+    const validation = await validateNewPokemon(req.body)
+    //   if (error) return res.status(400).send(error.details[0].message)
+    const newPokemon = {
+      id: nextId,
+      ...req.body,
+    }
+    nextId++
+    pokemons = [...pokemons, newPokemon]
+    res.send(newPokemon)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
   }
-
-  pokemons = [...pokemons, newPokemon]
-  res.send(newPokemon)
 })
 
-// app.patch("/pokemons/:id", (req, res) => {})
+// Add data validation:
+// - if id can't be found -> return error
+// - img, spawn_chance & avg_spawns can't be empty strings
+// - img should be a valid link like: "http://www.serebii.net/pokemongo/pokemon/040.png",
+app.patch("/pokemons/:id", async (req, res) => {
+  try {
+    const validation = await validateExistingPokemon(req.body)
+    //   if (error) return res.status(400).send(error.details[0].message)
+    console.log("validation:", validation)
+    const pokemonId = parseInt(req.params.id)
+    const pokemonToPatch = helpers.findId(pokemons, pokemonId)
+    const patchedPokemon = { ...pokemonToPatch, ...validation }
+    const indexToPatch = pokemons.indexOf(pokemonToPatch)
+    pokemons.splice(indexToPatch, 1, patchedPokemon)
+    console.log("it worked????:", pokemons[indexToPatch])
+    res.send({ patchedPokemon, indexToPatch })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
 
 app.delete("/pokemons/:id", (req, res) => {
   const pokemonWithId = helpers.findId(pokemons, parseInt(req.params.id))
@@ -73,12 +89,34 @@ app.delete("/pokemons/:id", (req, res) => {
   res.send(pokemonWithId)
 })
 
-const validatePokemon = (pokemon) => {
-  const schema = Joi.object({
-    name: Joi.string().min(3).required(),
-    type: Joi.array().min(1).required(),
+const validateNewPokemon = (pokemon) => {
+  const schema = yup.object().shape({
+    name: yup.string().required(),
+    type: yup
+      .array()
+      .of(yup.string().oneOf(helpers.pokemonTypes(pokemons)))
+      .min(1)
+      .max(2)
+      .required(),
   })
   return schema.validate(pokemon)
+}
+
+const validateExistingPokemon = (pokemon) => {
+  const schema = yup
+    .object()
+    .shape({
+      img: yup.string(),
+      // .test(
+      //   "empty-check",
+      //   "Img must be at least 8 characters",
+      //   // does not catch an empty string
+      //   (img) => img.length === 0)
+      spawn_chance: yup.number().positive(),
+      avg_spawns: yup.number().positive().integer(),
+    })
+    .noUnknown(true)
+  return schema.validate(pokemon, { strict: true })
 }
 
 const port = process.env.PORT || 4000
